@@ -10,7 +10,7 @@ class DetectorSenales:
 
     COLORES_DIBUJO = {
         "PARE": (0, 0, 255),        # rojo en BGR
-        "SIGA": (0, 200, 0),        # verde en BGR
+        "ADELANTE": (0, 200, 0),    # verde en BGR
         "DESCONOCIDO": (0, 255, 255)  # amarillo: es octágono pero color dudoso
     }
 
@@ -37,6 +37,12 @@ class DetectorSenales:
 
             if etiqueta is None:
                 continue
+
+            # Imprimir en consola según lo solicitado
+            if etiqueta == "PARE":
+                print("pare")
+            elif etiqueta == "ADELANTE":
+                print("adelante")
 
             self._dibujar(salida, aproximacion, etiqueta)
 

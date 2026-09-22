@@ -87,5 +87,5 @@ class ClasificadorColor:
         if (h <= 10 or h >= 170) and s > 80:
             return "PARE"
         elif 40 <= h <= 85 and s > 80:
-            return "SIGA"
+            return "ADELANTE"
         return "DESCONOCIDO"
