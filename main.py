@@ -31,13 +31,14 @@ from visualizador import Visualizador
 
 class AplicacionDetector:
     """
-    Punto de entrada del programa: abre la cámara, arma cada
-    pieza del pipeline y corre el loop principal (leer frame,
+    Punto de entrada del programa: abre el archivo de video o cámara,
+    arma cada pieza del pipeline y corre el loop principal (leer frame,
     procesarlo, mostrarlo) hasta que el usuario presione 'q'.
     """
 
-    def __init__(self, indice_camara=0):
-        self.cap = cv2.VideoCapture(indice_camara)
+    def __init__(self, fuente_video="uploads/ideal/video1.mp4"):
+        self.fuente_video = fuente_video
+        self.cap = cv2.VideoCapture(fuente_video)
 
         self.interfaz = InterfazControl()
         self.preprocesador = Preprocesador()
@@ -47,7 +48,7 @@ class AplicacionDetector:
 
     def ejecutar(self):
         if not self.cap.isOpened():
-            print("No se pudo abrir la camara.")
+            print(f"No se pudo abrir el video/camara: {self.fuente_video}")
             return
 
         try:
@@ -55,13 +56,17 @@ class AplicacionDetector:
                 ret, frame = self.cap.read()
 
                 if not ret:
-                    print("No se pudo leer el frame.")
-                    break
+                    # Si finaliza el video, reiniciar al inicio para bucle
+                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    ret, frame = self.cap.read()
+                    if not ret:
+                        print("Fin del video.")
+                        break
 
                 panel = self._procesar_frame(frame)
                 cv2.imshow(self.interfaz.nombre_ventana, panel)
 
-                if cv2.waitKey(1) & 0xFF == ord("q"):
+                if cv2.waitKey(30) & 0xFF == ord("q"):
                     break
         finally:
             self.cap.release()
@@ -82,4 +87,7 @@ class AplicacionDetector:
 
 
 if __name__ == "__main__":
-    AplicacionDetector().ejecutar()
+    import sys
+    ruta_video = sys.argv[1] if len(sys.argv) > 1 else "uploads/ideal/video1.mp4"
+    AplicacionDetector(fuente_video=ruta_video).ejecutar()
+
