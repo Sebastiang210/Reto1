@@ -26,21 +26,7 @@ class ClasificadorColor:
             1.0
         )
 
-    def clasificar(self, frame_bgr, contorno_aproximado):
-        """
-        Devuelve ("PARE" | "ADELANTE" | "DESCONOCIDO", (r, g, b))
-        o (None, None) si no hay píxeles suficientes.
-        """
-        mascara = self._mascara_del_contorno(frame_bgr.shape[:2], contorno_aproximado)
-        pixeles = self._pixeles_bgr_dentro(frame_bgr, mascara)
 
-        if len(pixeles) < self.minimo_pixeles:
-            return None, None
-
-        b, g, r = self._color_dominante(pixeles)
-        etiqueta = self._nombre_por_rgb(r, g, b)
-
-        return etiqueta, (r, g, b)
 
     def _mascara_del_contorno(self, forma_frame, contorno):
         # Imagen negra del tamaño del frame, rellena de blanco
@@ -56,8 +42,11 @@ class ClasificadorColor:
         return recorte[mascara == 255].astype(np.float32)
 
     def _color_dominante(self, pixeles):
-        # k=2: separa el color principal del contorno de texto/brillos
-        k = 2
+        # Usamos k=3 clusters para separar:
+        # 1) Color principal (rojo o verde de la señal)
+        # 2) Letras/brillos/blanco
+        # 3) Sombras/negro o bordes
+        k = 3 if len(pixeles) >= 30 else 2
         _, etiquetas, centros = cv2.kmeans(
             pixeles,
             k,
@@ -68,32 +57,71 @@ class ClasificadorColor:
         )
 
         conteos = np.bincount(etiquetas.flatten())
-        indice_dominante = np.argmax(conteos)
+        # Ordenamos los clusters de mayor a menor cantidad de píxeles
+        indices_ordenados = np.argsort(-conteos)
 
-        return centros[indice_dominante]
+        # Buscamos entre los clusters aquel que tenga color significativo (no sea negro ni blanco puro)
+        for idx in indices_ordenados:
+            b, g, r = centros[idx]
+            etiqueta = self._nombre_por_rgb(r, g, b)
+            if etiqueta in ("PARE", "ADELANTE"):
+                return centros[idx], etiqueta
+
+        # Si ninguno califica como PARE o ADELANTE, devolvemos el más abundante
+        indice_dominante = indices_ordenados[0]
+        b, g, r = centros[indice_dominante]
+        return centros[indice_dominante], self._nombre_por_rgb(r, g, b)
+
+    def clasificar(self, frame_bgr, contorno_aproximado):
+        """
+        Devuelve ("PARE" | "ADELANTE" | "DESCONOCIDO", (r, g, b))
+        o (None, None) si no hay píxeles suficientes.
+        """
+        mascara = self._mascara_del_contorno(frame_bgr.shape[:2], contorno_aproximado)
+        pixeles = self._pixeles_bgr_dentro(frame_bgr, mascara)
+
+        if len(pixeles) < self.minimo_pixeles:
+            return None, None
+
+        centro_elegido, etiqueta = self._color_dominante(pixeles)
+        b, g, r = centro_elegido
+
+        return etiqueta, (r, g, b)
 
     def _nombre_por_rgb(self, r, g, b):
         """
-        Clasificación directa en espacio RGB/BGR:
-        - Escala de Rojo: el componente R predomina significativamente sobre G y B.
-        - Escala de Verde: el componente G predomina significativamente sobre R y B.
+        Clasificación en espacio RGB:
+        - Descarta negro/sombra (muy baja intensidad)
+        - Descarta blanco/gris (r, g, b muy similares)
+        - Descarta el azul del chasis del carro (b > r y b > g)
+        - Detecta rojo (PARE) y verde (ADELANTE)
         """
-        # Descartar colores oscuros o muy grises/blancos donde R, G y B son casi idénticos
-        diferencia_rg = r - g
-        diferencia_gr = g - r
+        brillo = (r + g + b) / 3.0
 
-        # Predominio de rojo: R mayor que G y B
-        if r > 60 and r > g * 1.2 and r > b * 1.2:
+        # 1. Descartar sombras muy oscuras o negros
+        if brillo < 35:
+            return "DESCONOCIDO"
+
+        # 2. Descartar blancos o reflejos intensos donde R, G, B están saturados
+        if r > 200 and g > 200 and b > 200:
+            return "DESCONOCIDO"
+
+        # 3. Descartar el chasis azul del robot (donde el canal Azul predomina)
+        if b > r + 15 and b > g + 15:
+            return "DESCONOCIDO"
+
+        # 4. Escala de ROJO (PARE):
+        # R debe ser superior a G y B por margen claro
+        if r > 70 and r > g * 1.25 and r > b * 1.2:
+            return "PARE"
+        if (r - g > 25) and (r - b > 25):
             return "PARE"
 
-        # Predominio de verde: G mayor que R y B
-        if g > 50 and g > r * 1.15 and g > b * 1.1:
+        # 5. Escala de VERDE (ADELANTE):
+        # G debe ser superior a R y B por margen claro
+        if g > 55 and g > r * 1.15 and g > b * 1.1:
             return "ADELANTE"
-
-        # Criterio de respaldo si la iluminación desbalancea los brillos
-        if diferencia_rg > 25 and r > b:
-            return "PARE"
-        elif diferencia_gr > 20 and g > b:
+        if (g - r > 20) and (g - b > 15):
             return "ADELANTE"
 
         return "DESCONOCIDO"
