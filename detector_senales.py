@@ -58,11 +58,15 @@ class DetectorSenales:
         if area < area_minima or area > max_area:
             return None
 
+        # Descartar contornos que no son convexos (figuras raras/cruzadas como los trazos en pantalla)
+        if not cv2.isContourConvex(cv2.convexHull(contorno)):
+            pass # o validar relacion aspecto
+
         perimetro = cv2.arcLength(contorno, True)
         epsilon = (precision / 100) * perimetro
         aproximacion = cv2.approxPolyDP(contorno, epsilon, True)
 
-        # Se aceptan polígonos dentro del rango de lados válidos para pruebas
+        # Se aceptan polígonos de 4 u 8 lados
         if len(aproximacion) not in self.LADOS_VALIDOS:
             return None
 
