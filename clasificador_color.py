@@ -81,11 +81,9 @@ class ClasificadorColor:
 
     def _nombre_por_matiz(self, h, s):
         # En OpenCV, H va de 0 a 179. El rojo queda cerca de los
-        # extremos (0 o 179); el verde en el medio (40-85 aprox).
-        # Exigimos saturación alta para no confundir blanco/gris
-        # (que tienen S baja) con un color real.
-        if (h <= 10 or h >= 170) and s > 80:
+        # extremos (0 o 179); el verde en el medio (35-90 aprox).
+        if (h <= 15 or h >= 165) and s > 50:
             return "PARE"
-        elif 40 <= h <= 85 and s > 80:
+        elif 35 <= h <= 90 and s > 50:
             return "ADELANTE"
         return "DESCONOCIDO"

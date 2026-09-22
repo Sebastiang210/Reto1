@@ -26,9 +26,11 @@ class DetectorSenales:
         las señales detectadas dibujadas encima.
         """
         salida = frame.copy()
+        h_frame, w_frame = frame.shape[:2]
+        max_area = (h_frame * w_frame) * 0.65  # Ignorar si cubre más del 65% de la pantalla
 
         for contorno in contornos:
-            aproximacion = self._aproximar_si_vale(contorno, area_minima, precision)
+            aproximacion = self._aproximar_si_vale(contorno, area_minima, precision, max_area)
 
             if aproximacion is None:
                 continue
@@ -48,18 +50,20 @@ class DetectorSenales:
 
         return salida
 
-    def _aproximar_si_vale(self, contorno, area_minima, precision):
+    # Lados válidos para prueba (cuadrados/rectángulos=4, octágonos=8, etc.)
+    LADOS_VALIDOS = (4, 8)
+
+    def _aproximar_si_vale(self, contorno, area_minima, precision, max_area=150000):
         area = cv2.contourArea(contorno)
-        if area < area_minima:
+        if area < area_minima or area > max_area:
             return None
 
         perimetro = cv2.arcLength(contorno, True)
         epsilon = (precision / 100) * perimetro
         aproximacion = cv2.approxPolyDP(contorno, epsilon, True)
 
-        # Solo nos interesan los octágonos: PARE y SIGA son
-        # octágonos. Cualquier otra figura se descarta acá.
-        if len(aproximacion) != self.LADOS_OCTAGONO:
+        # Se aceptan polígonos dentro del rango de lados válidos para pruebas
+        if len(aproximacion) not in self.LADOS_VALIDOS:
             return None
 
         return aproximacion
