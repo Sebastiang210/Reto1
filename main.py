@@ -73,17 +73,16 @@ class AplicacionDetector:
             cv2.destroyAllWindows()
 
     def _procesar_frame(self, frame):
-        canny_bajo, canny_alto, blur, area_minima, precision = (
+        umbral_sat, blur, area_minima, precision = (
             self.interfaz.leer_controles()
         )
 
-        gris, gauss = self.preprocesador.a_gris_y_blur(frame, blur)
-        bordes = self.preprocesador.detectar_bordes(gauss, canny_bajo, canny_alto)
-        contornos = self.preprocesador.encontrar_contornos(bordes)
+        canal_s, binaria = self.preprocesador.obtener_mascara_color(frame, blur, umbral_sat)
+        contornos = self.preprocesador.encontrar_contornos(binaria)
 
         salida = self.detector.procesar(frame, contornos, area_minima, precision)
 
-        return self.visualizador.crear_mosaico(frame, gris, gauss, bordes, salida)
+        return self.visualizador.crear_mosaico(frame, canal_s, canal_s, binaria, salida)
 
 
 if __name__ == "__main__":

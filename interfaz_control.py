@@ -19,19 +19,17 @@ class InterfazControl:
         pass
 
     def _crear_trackbars(self):
-        cv2.createTrackbar("Canny Bajo", self.nombre_ventana, 80, 255, self._nada)
-        cv2.createTrackbar("Canny Alto", self.nombre_ventana, 180, 255, self._nada)
+        cv2.createTrackbar("Umbral Saturacion", self.nombre_ventana, 90, 255, self._nada)
         cv2.createTrackbar("Gaussian Blur", self.nombre_ventana, 5, 31, self._nada)
         cv2.createTrackbar("Area Minima", self.nombre_ventana, 2000, 40000, self._nada)
-        cv2.createTrackbar("Precision Poligono", self.nombre_ventana, 2, 20, self._nada)
+        cv2.createTrackbar("Precision Poligono", self.nombre_ventana, 3, 20, self._nada)
 
     def leer_controles(self):
         """
         Devuelve los valores actuales de los trackbars, ya
         validados (kernel de blur impar, precisión mínima 1).
         """
-        canny_bajo = cv2.getTrackbarPos("Canny Bajo", self.nombre_ventana)
-        canny_alto = cv2.getTrackbarPos("Canny Alto", self.nombre_ventana)
+        umbral_sat = cv2.getTrackbarPos("Umbral Saturacion", self.nombre_ventana)
         blur = cv2.getTrackbarPos("Gaussian Blur", self.nombre_ventana)
         area_minima = cv2.getTrackbarPos("Area Minima", self.nombre_ventana)
         precision = cv2.getTrackbarPos("Precision Poligono", self.nombre_ventana)
@@ -45,4 +43,4 @@ class InterfazControl:
         if precision < 1:
             precision = 1
 
-        return canny_bajo, canny_alto, blur, area_minima, precision
+        return umbral_sat, blur, area_minima, precision
