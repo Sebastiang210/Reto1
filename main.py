@@ -4,6 +4,8 @@ from interfaz_control import InterfazControl
 from preprocesador import Preprocesador
 from clasificador_color import ClasificadorColor
 from detector_senales import DetectorSenales
+from seguidor_linea import SeguidorLinea
+from comunicacion_robot import ComunicacionRobot
 from visualizador import Visualizador
 
 
@@ -22,6 +24,13 @@ from visualizador import Visualizador
 #   DetectorSenales    -> junta las dos piezas de arriba: filtra
 #                         los contornos que son octágonos y les
 #                         pregunta su color.
+#   SeguidorLinea       -> sigue la línea negra del piso: mide
+#                         qué tan corrida está la línea respecto
+#                         al centro del robot y decide ADELANTE,
+#                         IZQUIERDA o DERECHA.
+#   ComunicacionRobot   -> traduce esa acción a la letra que
+#                         entiende el robot (config_robot.py) y
+#                         la envía.
 #   Visualizador        -> arma el mosaico para ver cada etapa.
 #   InterfazControl      -> ventana + trackbars.
 #
@@ -38,12 +47,18 @@ class AplicacionDetector:
 
     def __init__(self, fuente_video="uploads/ideal/video1.mp4"):
         self.fuente_video = fuente_video
+        # Un número ("0", "1", ...) es el índice de una cámara;
+        # cualquier otra cosa se toma como ruta a un video.
+        if str(fuente_video).isdigit():
+            fuente_video = int(fuente_video)
         self.cap = cv2.VideoCapture(fuente_video)
 
         self.interfaz = InterfazControl()
         self.preprocesador = Preprocesador()
         self.clasificador_color = ClasificadorColor()
         self.detector = DetectorSenales(self.clasificador_color)
+        self.seguidor_linea = SeguidorLinea()
+        self.robot = ComunicacionRobot()
         self.visualizador = Visualizador()
 
     def ejecutar(self):
@@ -69,6 +84,7 @@ class AplicacionDetector:
                 if cv2.waitKey(30) & 0xFF == ord("q"):
                     break
         finally:
+            self.robot.cerrar()
             self.cap.release()
             cv2.destroyAllWindows()
 
@@ -82,6 +98,10 @@ class AplicacionDetector:
         contornos = self.preprocesador.encontrar_contornos(bordes)
 
         salida = self.detector.procesar(frame, contornos, area_minima, precision)
+
+        parametros_linea = self.interfaz.leer_controles_linea()
+        salida, accion = self.seguidor_linea.procesar(frame, parametros_linea, salida)
+        self.robot.enviar(accion)
 
         return self.visualizador.crear_mosaico(frame, gris, gauss, bordes, salida)
 
