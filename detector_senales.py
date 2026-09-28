@@ -1,3 +1,5 @@
+import math
+
 import cv2
 
 
@@ -19,8 +21,10 @@ class DetectorSenales:
       - su relación de aspecto es cercana a 1 (el octágono es
         tan ancho como alto; un cartel cortado por el borde
         del frame no lo es),
-      - es sólido (área / área de su envolvente convexa), o sea
-        una figura convexa y no una mancha irregular.
+      - es compacto: circularidad = 4·pi·área / perímetro² del
+        polígono aproximado. Un círculo da 1, un octágono regular
+        0.95, un cuadrado 0.785; un rombo aplastado o un
+        rectángulo alargado dan mucho menos.
     Después K-Means decide si el interior es rojo o verde.
     """
 
@@ -38,7 +42,7 @@ class DetectorSenales:
 
     ASPECTO_MIN = 0.6
     ASPECTO_MAX = 1.6
-    SOLIDEZ_MIN = 0.85
+    CIRCULARIDAD_MIN = 0.70
     MARGEN_BORDE = 3
 
     def __init__(self, clasificador_color):
@@ -101,8 +105,13 @@ class DetectorSenales:
         if not self.ASPECTO_MIN <= aspecto <= self.ASPECTO_MAX:
             return None, None
 
-        area_envolvente = cv2.contourArea(cv2.convexHull(contorno))
-        if area_envolvente == 0 or area / area_envolvente < self.SOLIDEZ_MIN:
+        # Circularidad del polígono aproximado (no del contorno
+        # crudo: el borde dentado de la máscara inflaría el
+        # perímetro). Solo usa área y perímetro.
+        area_poligono = cv2.contourArea(aproximacion)
+        perimetro_poligono = cv2.arcLength(aproximacion, True)
+        circularidad = 4 * math.pi * area_poligono / (perimetro_poligono ** 2)
+        if circularidad < self.CIRCULARIDAD_MIN:
             return None, None
 
         return aproximacion, forma

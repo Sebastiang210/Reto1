@@ -21,7 +21,7 @@ from visualizador import Visualizador
 #   DetectorSenales   -> sobre esa máscara busca contornos con
 #                         forma de octágono o de cuadrado girado
 #                         (área, approxPolyDP, relación de
-#                         aspecto, solidez).
+#                         aspecto, circularidad).
 #   ClasificadorColor -> K-Means sobre el interior de cada
 #                         figura para decidir PARE (rojo) o
 #                         SIGA (verde).

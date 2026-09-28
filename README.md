@@ -68,7 +68,7 @@ La cámara ve el frente del robot en la parte de abajo de la imagen, así que la
 
 1. **ROI**: se buscan solo en la parte de arriba del frame. Abajo está el robot, que tiene pilas verdes y piezas rojas y amarillas.
 2. **Segmentación por color**: blur, conversión a HSV y umbral por matiz (el rojo en los dos extremos del rango H, el verde en el medio) con saturación mínima. Salen dos máscaras, una roja y una verde, que se limpian con apertura y cierre y se juntan con un OR.
-3. **Forma**: un contorno se acepta si tiene el área mínima (o sea, el cartel está cerca), no toca el borde de la imagen ni el límite de la ROI, su relación de aspecto es cercana a 1, es sólido (área contra área de la envolvente convexa) y su `approxPolyDP` corresponde a una de las formas válidas:
+3. **Forma**: un contorno se acepta si tiene el área mínima (o sea, el cartel está cerca), no toca el borde de la imagen ni el límite de la ROI, su relación de aspecto es cercana a 1, es compacto (circularidad = 4π·área / perímetro² del polígono ≥ 0.70: el cuadrado da 0.785 y el octágono 0.95) y su `approxPolyDP` corresponde a una de las formas válidas:
    - **octágono**: 8 vértices, aceptando de 7 a 9 porque a veces approxPolyDP junta o parte una esquina;
    - **cuadrado girado**: 4 vértices.
 
