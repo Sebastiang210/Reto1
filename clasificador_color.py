@@ -7,11 +7,10 @@ class ClasificadorColor:
     Decide de qué color es el interior de un contorno, usando
     K-Means sobre los píxeles que quedan dentro de él.
 
-    K-Means no es parte de las diapositivas: se usa acá nada
-    más para esta decisión puntual (separar el color de fondo
-    del octágono del blanco de las letras "PARE"/"SIGA"). La
-    FORMA se sigue detectando solo con las herramientas de
-    clase (eso vive en Preprocesador).
+    K-Means (en su modalidad básica) se usa solo para esta
+    decisión puntual: separar el color de fondo del octágono
+    del blanco de las letras "PARE"/"SIGA". La FORMA la
+    analiza DetectorSenales.
     """
 
     def __init__(self, minimo_pixeles=30):
@@ -87,5 +86,5 @@ class ClasificadorColor:
         if (h <= 10 or h >= 170) and s > 80:
             return "PARE"
         elif 40 <= h <= 85 and s > 80:
-            return "ADELANTE"
+            return "SIGA"
         return "DESCONOCIDO"

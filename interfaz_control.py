@@ -26,8 +26,8 @@ class InterfazControl:
         cv2.namedWindow(self.nombre_ventana_controles_senales, cv2.WINDOW_NORMAL)
         cv2.namedWindow(self.nombre_ventana_controles_linea, cv2.WINDOW_NORMAL)
 
-        cv2.resizeWindow(self.nombre_ventana, 640, 480)
-        cv2.resizeWindow(self.nombre_ventana_controles_senales, 420, 200)
+        cv2.resizeWindow(self.nombre_ventana, 720, 640)
+        cv2.resizeWindow(self.nombre_ventana_controles_senales, 420, 340)
         cv2.resizeWindow(self.nombre_ventana_controles_linea, 420, 480)
 
         self._crear_trackbars_senales()
@@ -40,12 +40,18 @@ class InterfazControl:
         pass
 
     def _crear_trackbars_senales(self):
+        # Controles del detector de señales: umbral de color
+        # (HSV), filtros de forma y la máquina de estados.
         ventana = self.nombre_ventana_controles_senales
-        cv2.createTrackbar("Canny Bajo", ventana, 80, 255, self._nada)
-        cv2.createTrackbar("Canny Alto", ventana, 180, 255, self._nada)
-        cv2.createTrackbar("Blur", ventana, 5, 31, self._nada)
-        cv2.createTrackbar("Area Min", ventana, 2000, 40000, self._nada)
         cv2.createTrackbar("Precision", ventana, 2, 20, self._nada)
+        cv2.createTrackbar("Sat Min", ventana, 90, 255, self._nada)
+        cv2.createTrackbar("Val Min", ventana, 60, 255, self._nada)
+        cv2.createTrackbar("ROI Senal", ventana, 55, 100, self._nada)
+        cv2.createTrackbar("Area Min", ventana, 8000, 60000, self._nada)
+        cv2.createTrackbar("Lados Min", ventana, 7, 12, self._nada)
+        cv2.createTrackbar("Lados Max", ventana, 9, 12, self._nada)
+        cv2.createTrackbar("Confirmar", ventana, 3, 15, self._nada)
+        cv2.createTrackbar("Espera", ventana, 60, 300, self._nada)
 
     def _crear_trackbars_linea(self):
         # Controles del seguidor de línea: umbral de color (HSV) y
@@ -68,11 +74,14 @@ class InterfazControl:
         cv2.createTrackbar("Confirmar", ventana, 3, 15, self._nada)
 
     def _imprimir_leyenda(self):
-        print("=== Controles - Senales (deteccion de octagonos PARE/ADELANTE) ===")
-        print("  Canny Bajo / Canny Alto : umbrales del detector de bordes Canny")
-        print("  Blur                    : tamano del kernel del Gaussian Blur (se ajusta a impar)")
-        print("  Area Min                : area minima de un contorno para considerarlo")
+        print("=== Controles - Senales (deteccion de octagonos PARE/SIGA) ===")
         print("  Precision               : precision de approxPolyDP, en % del perimetro")
+        print("  Sat Min / Val Min       : saturacion y valor minimos (HSV) para que un pixel cuente como rojo/verde")
+        print("  ROI Senal               : parte del frame (%) desde arriba donde se buscan senales (abajo esta el robot)")
+        print("  Area Min                : area minima del cartel; define a que distancia reacciona el robot")
+        print("  Lados Min / Lados Max   : rango de vertices aceptado (octagono = 8)")
+        print("  Confirmar               : frames seguidos que debe verse una senal para obedecerla")
+        print("  Espera                  : frames en que se ignora PARE despues de reanudar con SIGA")
         print("=== Controles - Linea (seguidor de linea negra) ===")
         print("  Umbral Val / Umbral Sat : limites de Valor y Saturacion (HSV) para pintar un pixel como 'linea'")
         print("  Pos Lejos / Pos Cerca   : posicion (%) de cada banda de lectura, desde arriba del frame")
@@ -86,29 +95,23 @@ class InterfazControl:
         print("  Cruce Min               : alto minimo (%) de la banda que debe cubrir un contorno para ser la linea")
         print("  Confirmar               : frames seguidos que debe repetirse una accion nueva antes de enviarla")
 
-    def leer_controles(self):
+    def leer_controles_senales(self):
         """
-        Devuelve los valores actuales de los trackbars del
-        detector de señales, ya validados (kernel de blur impar,
-        precisión mínima 1).
+        Devuelve, como diccionario, los parámetros actuales de
+        los trackbars del detector de señales, ya validados.
         """
         ventana = self.nombre_ventana_controles_senales
-        canny_bajo = cv2.getTrackbarPos("Canny Bajo", ventana)
-        canny_alto = cv2.getTrackbarPos("Canny Alto", ventana)
-        blur = cv2.getTrackbarPos("Blur", ventana)
-        area_minima = cv2.getTrackbarPos("Area Min", ventana)
-        precision = cv2.getTrackbarPos("Precision", ventana)
-
-        # El kernel del Gaussian Blur tiene que ser impar y >= 1
-        if blur < 1:
-            blur = 1
-        if blur % 2 == 0:
-            blur += 1
-
-        if precision < 1:
-            precision = 1
-
-        return canny_bajo, canny_alto, blur, area_minima, precision
+        return {
+            "precision": max(cv2.getTrackbarPos("Precision", ventana), 1),
+            "sat_min": cv2.getTrackbarPos("Sat Min", ventana),
+            "val_min": cv2.getTrackbarPos("Val Min", ventana),
+            "roi_pct": max(cv2.getTrackbarPos("ROI Senal", ventana), 1),
+            "area_minima": cv2.getTrackbarPos("Area Min", ventana),
+            "lados_min": cv2.getTrackbarPos("Lados Min", ventana),
+            "lados_max": cv2.getTrackbarPos("Lados Max", ventana),
+            "frames_confirmacion": max(cv2.getTrackbarPos("Confirmar", ventana), 1),
+            "frames_espera": cv2.getTrackbarPos("Espera", ventana),
+        }
 
     def leer_controles_linea(self):
         """

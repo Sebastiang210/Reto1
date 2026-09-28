@@ -290,7 +290,7 @@ class SeguidorLinea:
             cv2.circle(salida, (objetivo, y), 8, self.COLOR_OBJETIVO, 2)
 
     def _dibujar_texto(self, salida, accion, error):
-        texto = accion if error is not None else f"{accion} (linea perdida)"
+        texto = f"linea: {accion}" if error is not None else f"linea: {accion} (perdida)"
         self._poner_texto(salida, texto, (10, 30), 0.8)
         if error is not None:
             self._poner_texto(salida, f"error: {error:+d} px", (10, 60), 0.6)

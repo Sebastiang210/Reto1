@@ -5,34 +5,36 @@ from preprocesador import Preprocesador
 from clasificador_color import ClasificadorColor
 from detector_senales import DetectorSenales
 from seguidor_linea import SeguidorLinea
+from control_senales import ControlSenales
 from comunicacion_robot import ComunicacionRobot
 from visualizador import Visualizador
 
 
 # ============================================================
-# IDEA GENERAL (misma que antes, ahora repartida en clases)
+# IDEA GENERAL
 # ============================================================
-# Las señales PARE y SIGA tienen la MISMA forma (octágono, 8
-# lados), así que la forma sola no alcanza para diferenciarlas.
-# El programa junta dos piezas:
+# En cada frame de la cámara el programa hace dos cosas en
+# paralelo y al final decide una sola acción para el robot:
 #
-#   Preprocesador     -> FORMA: gris, blur, Canny, dilatación,
-#                         contornos (todo visto en clase).
-#   ClasificadorColor -> COLOR: K-Means sobre los píxeles de
-#                         adentro de cada contorno, para decidir
-#                         si es rojo (PARE) o verde (SIGA).
-#   DetectorSenales    -> junta las dos piezas de arriba: filtra
-#                         los contornos que son octágonos y les
-#                         pregunta su color.
-#   SeguidorLinea       -> sigue la línea negra del piso: mide
-#                         qué tan corrida está la línea respecto
-#                         al centro del robot y decide ADELANTE,
-#                         IZQUIERDA o DERECHA.
-#   ComunicacionRobot   -> traduce esa acción a la letra que
+#   Preprocesador     -> máscara de píxeles rojo/verde saturados
+#                         (ROI, blur, HSV, umbral, morfología).
+#   DetectorSenales   -> sobre esa máscara busca contornos con
+#                         forma de octágono (área, approxPolyDP,
+#                         relación de aspecto, solidez).
+#   ClasificadorColor -> K-Means sobre el interior de cada
+#                         octágono para decidir PARE (rojo) o
+#                         SIGA (verde).
+#   SeguidorLinea     -> mide qué tan corrida está la línea negra
+#                         respecto al centro del robot y propone
+#                         ADELANTE, IZQUIERDA o DERECHA.
+#   ControlSenales    -> máquina de estados: si vio PARE manda
+#                         PARAR hasta que vea SIGA; si no, deja
+#                         pasar la acción del seguidor.
+#   ComunicacionRobot -> traduce la acción a la letra que
 #                         entiende el robot (config_robot.py) y
 #                         la envía.
-#   Visualizador        -> arma el mosaico para ver cada etapa.
-#   InterfazControl      -> ventana + trackbars.
+#   Visualizador      -> arma el panel que se ve en pantalla.
+#   InterfazControl   -> ventanas + trackbars.
 #
 # Esta clase (AplicacionDetector) es la que arma todas las
 # piezas y corre el loop de la cámara.
@@ -44,6 +46,11 @@ class AplicacionDetector:
     arma cada pieza del pipeline y corre el loop principal (leer frame,
     procesarlo, mostrarlo) hasta que el usuario presione 'q'.
     """
+
+    COLORES_ESTADO = {
+        ControlSenales.SIGUIENDO: (0, 200, 0),
+        ControlSenales.DETENIDO: (0, 0, 255),
+    }
 
     def __init__(self, fuente_video="uploads/ideal/video1.mp4"):
         self.fuente_video = fuente_video
@@ -58,6 +65,7 @@ class AplicacionDetector:
         self.clasificador_color = ClasificadorColor()
         self.detector = DetectorSenales(self.clasificador_color)
         self.seguidor_linea = SeguidorLinea()
+        self.control = ControlSenales()
         self.robot = ComunicacionRobot()
         self.visualizador = Visualizador()
 
@@ -89,25 +97,35 @@ class AplicacionDetector:
             cv2.destroyAllWindows()
 
     def _procesar_frame(self, frame):
-        canny_bajo, canny_alto, blur, area_minima, precision = (
-            self.interfaz.leer_controles()
-        )
-
-        gris, gauss = self.preprocesador.a_gris_y_blur(frame, blur)
-        bordes = self.preprocesador.detectar_bordes(gauss, canny_bajo, canny_alto)
-        contornos = self.preprocesador.encontrar_contornos(bordes)
-
-        salida = self.detector.procesar(frame, contornos, area_minima, precision)
-
+        parametros_senales = self.interfaz.leer_controles_senales()
         parametros_linea = self.interfaz.leer_controles_linea()
-        salida, accion = self.seguidor_linea.procesar(frame, parametros_linea, salida)
+
+        # 1. Señales: máscara de color -> contornos -> octágonos.
+        mascara = self.preprocesador.mascara_senales(frame, parametros_senales)
+        contornos = self.preprocesador.encontrar_contornos(mascara)
+        salida, detecciones = self.detector.procesar(frame, contornos, parametros_senales)
+
+        # 2. Línea: acción propuesta por el seguidor.
+        salida, accion_linea = self.seguidor_linea.procesar(frame, parametros_linea, salida)
+
+        # 3. Decisión final y envío al robot.
+        accion = self.control.actualizar(detecciones, accion_linea, parametros_senales)
         self.robot.enviar(accion)
 
-        return self.visualizador.crear_mosaico(frame, gris, gauss, bordes, salida)
+        self._dibujar_estado(salida, accion)
+        return self.visualizador.crear_panel(salida, mascara)
+
+    def _dibujar_estado(self, salida, accion):
+        estado = self.control.estado
+        texto = f"{estado} -> {accion}"
+        y = salida.shape[0] - 20
+        cv2.putText(salida, texto, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                    (0, 0, 0), 5, cv2.LINE_AA)
+        cv2.putText(salida, texto, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.9,
+                    self.COLORES_ESTADO[estado], 2, cv2.LINE_AA)
 
 
 if __name__ == "__main__":
     import sys
     ruta_video = sys.argv[1] if len(sys.argv) > 1 else "uploads/ideal/video1.mp4"
     AplicacionDetector(fuente_video=ruta_video).ejecutar()
-
