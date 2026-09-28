@@ -1,6 +1,8 @@
 # Reto 1: Seguidor de línea con señales PARE / SIGA
 
-Programa de visión artificial para un robot móvil que sigue una línea negra sobre la pista, corrige su trayectoria y obedece dos señales: un octágono rojo (PARE) y uno verde (SIGA). No usa redes neuronales ni modelos entrenados. Todo está hecho con operaciones vistas en el curso: recortes de ROI, espacios de color, umbralización, morfología, contornos, aproximación poligonal y K-Means básico.
+Programa de visión artificial para un robot móvil que sigue una línea negra sobre la pista, corrige su trayectoria y obedece dos señales: una tarjeta roja (PARE) y una verde (SIGA). Las tarjetas pueden ser octágonos, que son las que vamos a usar con el profesor, o cuadrados girados como los de los videos de prueba.
+
+La idea de la prueba es que el profesor pone la tarjeta PARE en cualquier momento mientras el robot recorre la pista. El robot se detiene y se queda quieto mientras la tarjeta siga ahí. Cuando la quitan, sigue. Si le muestran SIGA, también sigue. No usa redes neuronales ni modelos entrenados. Todo está hecho con operaciones vistas en el curso: recortes de ROI, espacios de color, umbralización, morfología, contornos, aproximación poligonal y K-Means básico.
 
 ## Cómo correrlo
 
@@ -40,8 +42,8 @@ El resto del código trabaja con los nombres de las acciones (`Accion.ADELANTE`,
 | `main.py` | Abre el video o la cámara y conecta todas las piezas en el loop principal. |
 | `seguidor_linea.py` | Encuentra la línea y propone ADELANTE / IZQUIERDA / DERECHA. |
 | `preprocesador.py` | Máscara de píxeles rojo o verde saturados para buscar las señales. |
-| `detector_senales.py` | Filtra por forma los contornos de la máscara (octágonos). |
-| `clasificador_color.py` | K-Means sobre el interior del octágono para decidir si es rojo o verde. |
+| `detector_senales.py` | Filtra por forma los contornos de la máscara (octágonos y cuadrados girados). |
+| `clasificador_color.py` | K-Means sobre el interior de la figura para decidir si es rojo o verde. |
 | `control_senales.py` | Máquina de estados: SIGUIENDO / DETENIDO. |
 | `comunicacion_robot.py` | Traduce la acción a su letra y la envía. |
 | `config_robot.py` | Letras y puerto del robot. |
@@ -65,22 +67,28 @@ La cámara ve el frente del robot en la parte de abajo de la imagen, así que la
 ## Señales PARE y SIGA
 
 1. **ROI**: se buscan solo en la parte de arriba del frame. Abajo está el robot, que tiene pilas verdes y piezas rojas y amarillas.
-2. **Segmentación por color**: blur, conversión a HSV y umbral por matiz (el rojo en los dos extremos del rango H, el verde en el medio) con saturación mínima. Luego apertura y cierre.
-3. **Forma**: un contorno se acepta si tiene el área mínima (o sea, el cartel está cerca), no toca el borde de la imagen, su `approxPolyDP` da entre 7 y 9 vértices, su relación de aspecto es cercana a 1 y es sólido (área contra área de la envolvente convexa).
-4. **Color con K-Means**: se agrupan en dos clusters los píxeles de adentro del octágono (el fondo y las letras blancas), y el matiz del cluster más grande decide PARE o SIGA.
+2. **Segmentación por color**: blur, conversión a HSV y umbral por matiz (el rojo en los dos extremos del rango H, el verde en el medio) con saturación mínima. Salen dos máscaras, una roja y una verde, que se limpian con apertura y cierre y se juntan con un OR.
+3. **Forma**: un contorno se acepta si tiene el área mínima (o sea, el cartel está cerca), no toca el borde de la imagen ni el límite de la ROI, su relación de aspecto es cercana a 1, es sólido (área contra área de la envolvente convexa) y su `approxPolyDP` corresponde a una de las formas válidas:
+   - **octágono**: 8 vértices, aceptando de 7 a 9 porque a veces approxPolyDP junta o parte una esquina;
+   - **cuadrado girado**: 4 vértices.
+
+   Las formas están en `DetectorSenales.FORMAS_VALIDAS`, así que agregar otra es cuestión de una línea.
+4. **Color con K-Means**: se agrupan en dos clusters los píxeles de adentro de la figura (el fondo y las letras blancas), y el matiz del cluster más grande decide PARE o SIGA.
 
 ### Máquina de estados
 
 ```
-SIGUIENDO --(PARE visto 3 frames seguidos)--> DETENIDO   (envía PARAR)
-DETENIDO  --(SIGA visto 3 frames seguidos)--> SIGUIENDO  (vuelve a obedecer a la línea)
+SIGUIENDO --(PARE visto 3 frames seguidos)---------> DETENIDO   (envía PARAR)
+DETENIDO  --(la tarjeta roja no se ve en 10 frames)-> SIGUIENDO  (la quitaron)
+DETENIDO  --(SIGA visto 3 frames seguidos)---------> SIGUIENDO
 ```
 
-Cuando el robot reanuda con SIGA, durante un tiempo (trackbar `Espera`) se ignora PARE, para que el mismo cartel no lo vuelva a frenar si sigue a la vista. Si en un frame aparecen varias señales, manda la más grande, que es la más cercana.
+Frenar es más exigente que seguir frenado. Para entrar a DETENIDO hace falta un PARE con forma válida durante 3 frames (trackbar `Confirmar`), así un falso positivo suelto no frena al robot. Para quedarse detenido basta con que haya una mancha roja de buen tamaño, porque cuando el profesor sostiene la tarjeta su mano puede tapar una parte y la forma deja de verse completa. Cuando la mancha roja lleva 10 frames sin aparecer (trackbar `Liberar`), el robot sigue. Si en un frame aparecen varias señales, manda la más grande, que es la más cercana.
 
-### Nota sobre los videos de prueba
+### Pruebas
 
-Los carteles de los videos de `uploads/ideal/` son cuadrados girados, no octágonos, y approxPolyDP les da 4 o 5 lados. Con los valores por defecto (octágono, 7 a 9 lados) el programa no los toma como señales. Para probar con esos videos hay que bajar el trackbar `Lados Min` a 4. Así probado, en los cuatro videos el robot ve SIGA y sigue, llega a PARE y se detiene, sin falsos positivos por la cartulina roja que aparece a un lado de la pista en `video1`.
+- **Videos de `uploads/ideal/`** (cuadrados girados): el robot ve SIGA y sigue, llega a PARE y se detiene, sin falsos positivos por la cartulina roja que aparece a un lado de la pista en `video1`.
+- **Octágonos**: como no hay videos con las tarjetas octagonales, se pegaron las tarjetas PARE y SIGA sobre los nueve videos, con posición, tamaño y rotación al azar, y con una "mano" tapando parte de la tarjeta. En todos el robot frena al tercer frame de aparecer PARE, se mantiene quieto aunque la mano tape la tarjeta y sigue 10 frames después de que la quitan. Con SIGA a la vista mientras avanza, no cambia nada.
 
 ## Limitaciones y posibles mejoras
 
@@ -88,7 +96,8 @@ Los carteles de los videos de `uploads/ideal/` son cuadrados girados, no octágo
 - El control es de tipo encendido/apagado: izquierda, derecha o adelante, sin velocidades intermedias. Si el robot aceptara comandos con intensidad, el mismo error en píxeles serviría para un control proporcional y los giros serían más suaves.
 - El centro del robot se asume en la mitad de la imagen. Si la cámara queda corrida, se corrige con el trackbar `Centro`.
 - Cuando un cartel tapa la línea justo delante del robot, el seguidor depende de la banda lejana o de la memoria. En tramos largos tapados podría desviarse.
-- Un cartel que queda cortado por el límite de la ROI puede dar un número de lados equivocado. Se podría ajustar la ROI o descartar también los contornos que tocan ese límite.
+- Mientras está detenido, cualquier objeto rojo grande a la vista lo mantiene quieto (por la histéresis). Si en la pista hay otras cosas rojas, conviene subir `Area Min` o achicar la ROI.
+- Si el profesor pone la tarjeta muy cerca de la cámara o pegada al borde de la imagen, la forma no se puede confirmar y el robot no frena hasta que la tarjeta quede entera a la vista.
 - Las letras y el puerto del robot todavía son provisionales.
 
 ## Comparación con otros equipos

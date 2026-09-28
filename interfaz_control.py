@@ -27,7 +27,7 @@ class InterfazControl:
         cv2.namedWindow(self.nombre_ventana_controles_linea, cv2.WINDOW_NORMAL)
 
         cv2.resizeWindow(self.nombre_ventana, 720, 640)
-        cv2.resizeWindow(self.nombre_ventana_controles_senales, 420, 340)
+        cv2.resizeWindow(self.nombre_ventana_controles_senales, 420, 280)
         cv2.resizeWindow(self.nombre_ventana_controles_linea, 420, 480)
 
         self._crear_trackbars_senales()
@@ -43,15 +43,13 @@ class InterfazControl:
         # Controles del detector de señales: umbral de color
         # (HSV), filtros de forma y la máquina de estados.
         ventana = self.nombre_ventana_controles_senales
-        cv2.createTrackbar("Precision", ventana, 2, 20, self._nada)
+        cv2.createTrackbar("Precision", ventana, 3, 20, self._nada)
         cv2.createTrackbar("Sat Min", ventana, 90, 255, self._nada)
         cv2.createTrackbar("Val Min", ventana, 60, 255, self._nada)
         cv2.createTrackbar("ROI Senal", ventana, 55, 100, self._nada)
         cv2.createTrackbar("Area Min", ventana, 8000, 60000, self._nada)
-        cv2.createTrackbar("Lados Min", ventana, 7, 12, self._nada)
-        cv2.createTrackbar("Lados Max", ventana, 9, 12, self._nada)
         cv2.createTrackbar("Confirmar", ventana, 3, 15, self._nada)
-        cv2.createTrackbar("Espera", ventana, 60, 300, self._nada)
+        cv2.createTrackbar("Liberar", ventana, 10, 60, self._nada)
 
     def _crear_trackbars_linea(self):
         # Controles del seguidor de línea: umbral de color (HSV) y
@@ -79,9 +77,8 @@ class InterfazControl:
         print("  Sat Min / Val Min       : saturacion y valor minimos (HSV) para que un pixel cuente como rojo/verde")
         print("  ROI Senal               : parte del frame (%) desde arriba donde se buscan senales (abajo esta el robot)")
         print("  Area Min                : area minima del cartel; define a que distancia reacciona el robot")
-        print("  Lados Min / Lados Max   : rango de vertices aceptado (octagono = 8)")
         print("  Confirmar               : frames seguidos que debe verse una senal para obedecerla")
-        print("  Espera                  : frames en que se ignora PARE despues de reanudar con SIGA")
+        print("  Liberar                 : frames sin ver la tarjeta roja para que el robot siga")
         print("=== Controles - Linea (seguidor de linea negra) ===")
         print("  Umbral Val / Umbral Sat : limites de Valor y Saturacion (HSV) para pintar un pixel como 'linea'")
         print("  Pos Lejos / Pos Cerca   : posicion (%) de cada banda de lectura, desde arriba del frame")
@@ -107,10 +104,8 @@ class InterfazControl:
             "val_min": cv2.getTrackbarPos("Val Min", ventana),
             "roi_pct": max(cv2.getTrackbarPos("ROI Senal", ventana), 1),
             "area_minima": cv2.getTrackbarPos("Area Min", ventana),
-            "lados_min": cv2.getTrackbarPos("Lados Min", ventana),
-            "lados_max": cv2.getTrackbarPos("Lados Max", ventana),
             "frames_confirmacion": max(cv2.getTrackbarPos("Confirmar", ventana), 1),
-            "frames_espera": cv2.getTrackbarPos("Espera", ventana),
+            "frames_liberar": max(cv2.getTrackbarPos("Liberar", ventana), 1),
         }
 
     def leer_controles_linea(self):

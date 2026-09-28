@@ -19,17 +19,19 @@ from visualizador import Visualizador
 #   Preprocesador     -> máscara de píxeles rojo/verde saturados
 #                         (ROI, blur, HSV, umbral, morfología).
 #   DetectorSenales   -> sobre esa máscara busca contornos con
-#                         forma de octágono (área, approxPolyDP,
-#                         relación de aspecto, solidez).
+#                         forma de octágono o de cuadrado girado
+#                         (área, approxPolyDP, relación de
+#                         aspecto, solidez).
 #   ClasificadorColor -> K-Means sobre el interior de cada
-#                         octágono para decidir PARE (rojo) o
+#                         figura para decidir PARE (rojo) o
 #                         SIGA (verde).
 #   SeguidorLinea     -> mide qué tan corrida está la línea negra
 #                         respecto al centro del robot y propone
 #                         ADELANTE, IZQUIERDA o DERECHA.
 #   ControlSenales    -> máquina de estados: si vio PARE manda
-#                         PARAR hasta que vea SIGA; si no, deja
-#                         pasar la acción del seguidor.
+#                         PARAR mientras la tarjeta siga ahí (o
+#                         hasta ver SIGA); si no, deja pasar la
+#                         acción del seguidor.
 #   ComunicacionRobot -> traduce la acción a la letra que
 #                         entiende el robot (config_robot.py) y
 #                         la envía.
@@ -100,20 +102,21 @@ class AplicacionDetector:
         parametros_senales = self.interfaz.leer_controles_senales()
         parametros_linea = self.interfaz.leer_controles_linea()
 
-        # 1. Señales: máscara de color -> contornos -> octágonos.
-        mascara = self.preprocesador.mascara_senales(frame, parametros_senales)
-        contornos = self.preprocesador.encontrar_contornos(mascara)
+        # 1. Señales: máscaras de color -> contornos -> formas.
+        mascaras = self.preprocesador.mascaras_senales(frame, parametros_senales)
+        contornos = self.preprocesador.encontrar_contornos(mascaras["total"])
         salida, detecciones = self.detector.procesar(frame, contornos, parametros_senales)
+        area_roja = self.preprocesador.area_mayor(mascaras["roja"])
 
         # 2. Línea: acción propuesta por el seguidor.
         salida, accion_linea = self.seguidor_linea.procesar(frame, parametros_linea, salida)
 
         # 3. Decisión final y envío al robot.
-        accion = self.control.actualizar(detecciones, accion_linea, parametros_senales)
+        accion = self.control.actualizar(detecciones, area_roja, accion_linea, parametros_senales)
         self.robot.enviar(accion)
 
         self._dibujar_estado(salida, accion)
-        return self.visualizador.crear_panel(salida, mascara)
+        return self.visualizador.crear_panel(salida, mascaras["total"])
 
     def _dibujar_estado(self, salida, accion):
         estado = self.control.estado
