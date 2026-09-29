@@ -1,3 +1,4 @@
+import time
 import config_robot
 
 
@@ -72,15 +73,18 @@ class SalidaBluetooth:
 class ComunicacionRobot:
     """
     Traduce una Accion a su letra (según config_robot) y la
-    envía por el canal configurado. Solo envía cuando la
-    acción cambia, para no saturar al robot mandando la misma
-    letra en cada frame.
+    envía por el canal configurado.
+    Envía constantemente señales activas (adelante, izquierda, etc.)
+    cada INTERVALO_REFRESCO_S (o inmediatamente si la acción cambia)
+    para mantener el robot en movimiento fluido.
     """
 
     def __init__(self, letras=None, salida=None):
         self.letras = letras or config_robot.LETRAS
         self.salida = salida or self._crear_salida()
         self.ultima_accion = None
+        self.ultimo_tiempo_envio = 0
+        self.intervalo = getattr(config_robot, "INTERVALO_REFRESCO_S", 0.1)
 
     def _crear_salida(self):
         if getattr(config_robot, "MAC_BLUETOOTH", None):
@@ -93,15 +97,21 @@ class ComunicacionRobot:
         return SalidaConsola()
 
     def enviar(self, accion):
-        if accion == self.ultima_accion:
+        ahora = time.time()
+        # Enviar inmediatamente si cambió la acción, o periódicamente si sigue siendo la misma
+        debe_enviar = (accion != self.ultima_accion) or ((ahora - self.ultimo_tiempo_envio) >= self.intervalo)
+
+        if not debe_enviar:
             return
 
         texto = self.letras[accion] + config_robot.TERMINADOR
         self.salida.escribir(texto, accion)
         self.ultima_accion = accion
+        self.ultimo_tiempo_envio = ahora
 
     def cerrar(self):
         # Antes de soltar la conexión se deja el robot quieto.
-        self.enviar(Accion.PARAR)
+        texto = self.letras[Accion.PARAR] + config_robot.TERMINADOR
+        self.salida.escribir(texto, Accion.PARAR)
         self.salida.cerrar()
 

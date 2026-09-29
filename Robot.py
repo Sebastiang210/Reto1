@@ -45,7 +45,6 @@ class Robot:
         try:
             self.bluetooth_socket.sendall(comando.encode("utf-8"))
             print(f"Comando enviado: {comando}")
-            time.sleep(0.05)
         except OSError as e:
             print(f"Error enviando comando: {e}")
 

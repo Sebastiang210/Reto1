@@ -135,5 +135,5 @@ class AplicacionDetector:
 
 if __name__ == "__main__":
     import sys
-    ruta_video = sys.argv[1] if len(sys.argv) > 1 else "uploads/ideal/video1.mp4"
+    ruta_video = sys.argv[1] if len(sys.argv) > 1 else "0"
     AplicacionDetector(fuente_video=ruta_video).ejecutar()
