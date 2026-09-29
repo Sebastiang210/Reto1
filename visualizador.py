@@ -16,7 +16,9 @@ class Visualizador:
 
     def crear_panel(self, salida, mascara):
         mascara_bgr = cv2.cvtColor(mascara, cv2.COLOR_GRAY2BGR)
-        return np.hstack([self._redimensionar(salida), self._redimensionar(mascara_bgr)])
+        # return np.hstack([self._redimensionar(salida), self._redimensionar(mascara_bgr)])
+        return np.hstack([self._redimensionar(salida)])
+        
 
     def _redimensionar(self, imagen):
         alto, ancho = imagen.shape[:2]

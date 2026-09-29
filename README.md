@@ -13,6 +13,11 @@ python main.py uploads/ideal/video3.mp4     # otro video
 python main.py 0                            # cámara 0
 ```
 
+El frame de la cámara se gira 90 grados en sentido horario para corregir el
+stream del móvil cuando está en vertical. Si la imagen queda girada hacia el
+lado contrario, cambia `ROTACION_CAMARA` en `main.py` a
+`cv2.ROTATE_90_COUNTERCLOCKWISE`.
+
 Se abren tres ventanas: el video procesado (con la máscara de color al lado) y dos ventanas de trackbars para calibrar en vivo. El significado de cada trackbar se imprime en consola al arrancar. Con `q` se cierra.
 
 ## Comunicación con el robot
@@ -37,18 +42,18 @@ El resto del código trabaja con los nombres de las acciones (`Accion.ADELANTE`,
 
 ## Cómo está organizado
 
-| Archivo | Qué hace |
-|---|---|
-| `main.py` | Abre el video o la cámara y conecta todas las piezas en el loop principal. |
-| `seguidor_linea.py` | Encuentra la línea y propone ADELANTE / IZQUIERDA / DERECHA. |
-| `preprocesador.py` | Máscara de píxeles rojo o verde saturados para buscar las señales. |
-| `detector_senales.py` | Filtra por forma los contornos de la máscara (octágonos y cuadrados girados). |
-| `clasificador_color.py` | K-Means sobre el interior de la figura para decidir si es rojo o verde. |
-| `control_senales.py` | Máquina de estados: SIGUIENDO / DETENIDO. |
-| `comunicacion_robot.py` | Traduce la acción a su letra y la envía. |
-| `config_robot.py` | Letras y puerto del robot. |
-| `interfaz_control.py` | Ventanas y trackbars. |
-| `visualizador.py` | Arma el panel que se ve en pantalla. |
+| Archivo                 | Qué hace                                                                      |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `main.py`               | Abre el video o la cámara y conecta todas las piezas en el loop principal.    |
+| `seguidor_linea.py`     | Encuentra la línea y propone ADELANTE / IZQUIERDA / DERECHA.                  |
+| `preprocesador.py`      | Máscara de píxeles rojo o verde saturados para buscar las señales.            |
+| `detector_senales.py`   | Filtra por forma los contornos de la máscara (octágonos y cuadrados girados). |
+| `clasificador_color.py` | K-Means sobre el interior de la figura para decidir si es rojo o verde.       |
+| `control_senales.py`    | Máquina de estados: SIGUIENDO / DETENIDO.                                     |
+| `comunicacion_robot.py` | Traduce la acción a su letra y la envía.                                      |
+| `config_robot.py`       | Letras y puerto del robot.                                                    |
+| `interfaz_control.py`   | Ventanas y trackbars.                                                         |
+| `visualizador.py`       | Arma el panel que se ve en pantalla.                                          |
 
 ## Seguidor de línea
 
@@ -73,6 +78,7 @@ La cámara ve el frente del robot en la parte de abajo de la imagen, así que la
    - **cuadrado girado**: 4 vértices.
 
    Las formas están en `DetectorSenales.FORMAS_VALIDAS`, así que agregar otra es cuestión de una línea.
+
 4. **Color con K-Means**: se agrupan en dos clusters los píxeles de adentro de la figura (el fondo y las letras blancas), y el matiz del cluster más grande decide PARE o SIGA.
 
 ### Máquina de estados

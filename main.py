@@ -53,6 +53,9 @@ class AplicacionDetector:
         ControlSenales.SIGUIENDO: (0, 200, 0),
         ControlSenales.DETENIDO: (0, 0, 255),
     }
+    # El stream del movil llega apaisado aunque el telefono este vertical.
+    # Cambia a ROTATE_90_COUNTERCLOCKWISE si la imagen queda invertida.
+    ROTACION_CAMARA = cv2.ROTATE_90_CLOCKWISE
 
     def __init__(self, fuente_video="0"):
         self.fuente_video = fuente_video
@@ -93,6 +96,7 @@ class AplicacionDetector:
                         print("Fin del video.")
                         break
 
+                frame = cv2.rotate(frame, self.ROTACION_CAMARA)
                 panel = self._procesar_frame(frame)
                 cv2.imshow(self.interfaz.nombre_ventana, panel)
 
