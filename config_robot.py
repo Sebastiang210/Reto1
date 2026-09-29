@@ -33,5 +33,5 @@ BAUDIOS = 9600
 TERMINADOR = ""
 
 # Intervalo en segundos para enviar señales constantemente al robot (ej: cada 0.1s = 10 veces por seg)
-INTERVALO_REFRESCO_S = 0.1
+INTERVALO_REFRESCO_S = 0.5
 
