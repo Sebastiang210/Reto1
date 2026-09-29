@@ -23,7 +23,7 @@ LETRAS = {
 
 # Dirección MAC de Bluetooth del mBot (dejar en None o vacío "" para modo pruebas/consola)
 # Cambia esta MAC por la de tu robot asignado en clase:
-MAC_BLUETOOTH = "00:1B:10:21:2C:1B"
+MAC_BLUETOOTH = "00:1B:10:31:0A:AB"
 PUERTO_BLUETOOTH = 1
 
 # Si se usa puerto serial USB en lugar de socket Bluetooth directo:
@@ -33,5 +33,5 @@ BAUDIOS = 9600
 TERMINADOR = ""
 
 # Intervalo en segundos para enviar señales constantemente al robot (ej: cada 0.1s = 10 veces por seg)
-INTERVALO_REFRESCO_S = 0.5
+INTERVALO_REFRESCO_S = 0.3
 

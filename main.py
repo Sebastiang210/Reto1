@@ -6,7 +6,7 @@ from clasificador_color import ClasificadorColor
 from detector_senales import DetectorSenales
 from seguidor_linea import SeguidorLinea
 from control_senales import ControlSenales
-from comunicacion_robot import ComunicacionRobot
+from comunicacion_robot import ComunicacionRobot, SalidaConsola
 from visualizador import Visualizador
 
 
@@ -57,7 +57,7 @@ class AplicacionDetector:
     # Cambia a ROTATE_90_COUNTERCLOCKWISE si la imagen queda invertida.
     ROTACION_CAMARA = cv2.ROTATE_90_CLOCKWISE
 
-    def __init__(self, fuente_video="0"):
+    def __init__(self, fuente_video="0", sin_robot=False):
         self.fuente_video = fuente_video
         # Un número ("0", "1", ...) o int es el índice de la cámara física;
         # cualquier otra cosa es una ruta a un archivo de video.
@@ -68,6 +68,16 @@ class AplicacionDetector:
         else:
             indice = fuente_video
 
+        # Primero el robot: conectarse por Bluetooth puede tardar
+        # varios segundos, y si las ventanas ya estuvieran abiertas
+        # se quedarían grises y congeladas mientras tanto.
+        # En modo prueba no se conecta: las letras solo se imprimen.
+        if sin_robot:
+            print("Modo prueba: sin robot, las letras solo se imprimen en consola.")
+            self.robot = ComunicacionRobot(salida=SalidaConsola())
+        else:
+            self.robot = ComunicacionRobot()
+
         self.cap = cv2.VideoCapture(indice)
 
         self.interfaz = InterfazControl()
@@ -76,7 +86,6 @@ class AplicacionDetector:
         self.detector = DetectorSenales(self.clasificador_color)
         self.seguidor_linea = SeguidorLinea()
         self.control = ControlSenales()
-        self.robot = ComunicacionRobot()
         self.visualizador = Visualizador()
 
     def ejecutar(self):
@@ -139,5 +148,10 @@ class AplicacionDetector:
 
 if __name__ == "__main__":
     import sys
-    ruta_video = sys.argv[1] if len(sys.argv) > 1 else "0"
-    AplicacionDetector(fuente_video=ruta_video).ejecutar()
+    # Uso: python main.py [fuente] [--prueba]
+    #   python main.py 2                -> cámara 2, conectado al robot
+    #   python main.py 2 --prueba       -> cámara 2, sin robot (solo consola)
+    argumentos = [a for a in sys.argv[1:] if not a.startswith("--")]
+    sin_robot = "--prueba" in sys.argv
+    ruta_video = argumentos[0] if argumentos else "0"
+    AplicacionDetector(fuente_video=ruta_video, sin_robot=sin_robot).ejecutar()

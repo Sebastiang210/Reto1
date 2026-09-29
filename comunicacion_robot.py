@@ -84,7 +84,7 @@ class ComunicacionRobot:
         self.salida = salida or self._crear_salida()
         self.ultima_accion = None
         self.ultimo_tiempo_envio = 0
-        self.intervalo = getattr(config_robot, "INTERVALO_REFRESCO_S", 0.5)
+        self.intervalo = getattr(config_robot, "INTERVALO_REFRESCO_S", 0.3)
 
     def _crear_salida(self):
         if getattr(config_robot, "MAC_BLUETOOTH", None):
