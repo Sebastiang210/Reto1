@@ -54,13 +54,18 @@ class AplicacionDetector:
         ControlSenales.DETENIDO: (0, 0, 255),
     }
 
-    def __init__(self, fuente_video="uploads/ideal/video1.mp4"):
+    def __init__(self, fuente_video="0"):
         self.fuente_video = fuente_video
-        # Un número ("0", "1", ...) es el índice de una cámara;
-        # cualquier otra cosa se toma como ruta a un video.
-        if str(fuente_video).isdigit():
-            fuente_video = int(fuente_video)
-        self.cap = cv2.VideoCapture(fuente_video)
+        # Un número ("0", "1", ...) o int es el índice de la cámara física;
+        # cualquier otra cosa es una ruta a un archivo de video.
+        if isinstance(fuente_video, str) and fuente_video.isdigit():
+            indice = int(fuente_video)
+        elif isinstance(fuente_video, int):
+            indice = fuente_video
+        else:
+            indice = fuente_video
+
+        self.cap = cv2.VideoCapture(indice)
 
         self.interfaz = InterfazControl()
         self.preprocesador = Preprocesador()

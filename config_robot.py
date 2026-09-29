@@ -7,20 +7,28 @@
 # nombres de las acciones ("ADELANTE", "IZQUIERDA", ...) y
 # nunca con las letras directamente.
 
-# Letra que se envía al robot por cada acción.
+# Letra que se envía al robot por cada acción según especificación del mBot:
+# 'w' -> adelante
+# 's' -> atras
+# 'a' -> izquierda
+# 'd' -> derecha
+# 'x' -> parar
 LETRAS = {
-    "ADELANTE": "F",
-    "IZQUIERDA": "I",
-    "DERECHA": "D",
-    "PARAR": "S",
+    "ADELANTE": "w",
+    "IZQUIERDA": "a",
+    "DERECHA": "d",
+    "ATRAS": "s",
+    "PARAR": "x",
 }
 
-# Puerto serial del robot (por ejemplo "COM3" en Windows o
-# "/dev/ttyUSB0" en Linux). Con None las letras solo se
-# imprimen en consola, útil para probar con los videos.
+# Dirección MAC de Bluetooth del mBot (dejar en None o vacío "" para modo pruebas/consola)
+# Cambia esta MAC por la de tu robot asignado en clase:
+MAC_BLUETOOTH = "00:1B:10:21:2C:1B"
+PUERTO_BLUETOOTH = 1
+
+# Si se usa puerto serial USB en lugar de socket Bluetooth directo:
 PUERTO_SERIAL = None
 BAUDIOS = 9600
 
-# Caracter que se agrega después de cada letra (por ejemplo
-# "\n" si el robot lee línea por línea). Vacío = solo la letra.
 TERMINADOR = ""
+

@@ -41,6 +41,34 @@ class SalidaSerial:
         self.conexion.close()
 
 
+class SalidaBluetooth:
+    """
+    Canal Bluetooth directo mediante RFCOMM socket (Robot.py del profesor).
+    """
+
+    def __init__(self, mac_address, port=1):
+        from Robot import Robot
+        self.robot = Robot(mac_address, port)
+        try:
+            self.robot.conectar()
+        except Exception as e:
+            print(f"[SalidaBluetooth] No se pudo conectar a {mac_address}: {e}")
+            print("[SalidaBluetooth] Pasando a modo consola.")
+            self.robot = None
+
+    def escribir(self, texto, accion):
+        if self.robot is not None:
+            # Eliminar posibles terminadores para enviar el comando limpio
+            comando = texto.strip()
+            self.robot._enviar(comando)
+        print(f"[robot] {accion:<9} -> {texto!r}")
+
+    def cerrar(self):
+        if self.robot is not None:
+            self.robot.parar()
+            self.robot.cerrar()
+
+
 class ComunicacionRobot:
     """
     Traduce una Accion a su letra (según config_robot) y la
@@ -55,6 +83,11 @@ class ComunicacionRobot:
         self.ultima_accion = None
 
     def _crear_salida(self):
+        if getattr(config_robot, "MAC_BLUETOOTH", None):
+            return SalidaBluetooth(
+                config_robot.MAC_BLUETOOTH,
+                getattr(config_robot, "PUERTO_BLUETOOTH", 1)
+            )
         if config_robot.PUERTO_SERIAL:
             return SalidaSerial(config_robot.PUERTO_SERIAL, config_robot.BAUDIOS)
         return SalidaConsola()
@@ -71,3 +104,4 @@ class ComunicacionRobot:
         # Antes de soltar la conexión se deja el robot quieto.
         self.enviar(Accion.PARAR)
         self.salida.cerrar()
+
